@@ -7,6 +7,7 @@ from .models import Conversation
 
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 load_dotenv()
 
@@ -38,7 +39,13 @@ def send_whatsapp_message(request):
 
             try:
                 conversation = Conversation.objects.get(phone_number=sender_phone_number)
-                context = conversation.context
+                # if updated more than 30 mintues ago, reset context
+                if (conversation.updated_at - datetime.now()).total_seconds() > 1800:
+                    context = text_body
+                    conversation.context = context
+                    conversation.save()
+                else:
+                    context = conversation.context
             except Conversation.DoesNotExist:
                 context = text_body
                 conversation = Conversation(phone_number=sender_phone_number, context=context)
