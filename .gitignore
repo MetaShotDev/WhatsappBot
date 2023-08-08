@@ -1,0 +1,9 @@
+dev/
+
+backend/dev_settings.py
+
+db.sqlite3
+
+__pycache__/
+
+.env

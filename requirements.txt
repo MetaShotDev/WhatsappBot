@@ -1,0 +1,5 @@
+django
+djangorestframework
+heyoo
+openai
+python-dotenv
