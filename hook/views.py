@@ -39,8 +39,11 @@ def send_whatsapp_message(request):
 
             try:
                 conversation = Conversation.objects.get(phone_number=sender_phone_number)
-                # if updated more than 30 mintues ago, reset context
-                if (conversation.updated_at - datetime.now()).total_seconds() > 1800:
+                if conversation.token_count > 10000:
+                    text_body = "Sorry, you have exceeded the free limit allowed."
+                    messenger.send_message(text_body, sender_phone_number)
+                    return HttpResponse({'status': 'success'})
+                if (conversation.updated_at.replace(tzinfo=None) - datetime.now()).total_seconds() > 1800:
                     context = text_body
                     conversation.context = context
                     conversation.save()
@@ -63,6 +66,7 @@ def send_whatsapp_message(request):
 
                 response = completion['choices'][0].message
                 conversation.context = str(response['content'])[:100]
+                conversation.token_count += len(response['content'].split())
                 conversation.save()
                 messenger.send_message(response["content"], sender_phone_number)
             except:
