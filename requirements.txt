@@ -3,3 +3,4 @@ djangorestframework
 heyoo
 openai
 python-dotenv
+django-cors-headers
