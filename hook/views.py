@@ -27,7 +27,7 @@ def send_whatsapp_message(request):
 
             messenger = WhatsApp(
                 os.getenv('WHATSAPP_API_KEY'),
-                phone_number_id='104497712675058'
+                phone_number_id='128744806985877'
             )
 
             message = value['messages'][0]
