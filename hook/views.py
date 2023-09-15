@@ -37,6 +37,8 @@ def send_whatsapp_message(request):
 
             context = ''
 
+            messenger.mark_as_read(message['id'])
+
             try:
                 conversation = Conversation.objects.get(phone_number=sender_phone_number)
                 if conversation.token_count > 10000:
