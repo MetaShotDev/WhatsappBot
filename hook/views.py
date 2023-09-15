@@ -53,7 +53,7 @@ def send_whatsapp_message(request):
                 context = text_body
                 conversation = Conversation(phone_number=sender_phone_number, context=context)
                 conversation.save()
-                welcome_text = "Welcome to ALL.AI, How can I help you today?.\nBy Continuing, you agree to our Terms of Service and Privacy Policy."
+                welcome_text = "Welcome to ALLAI, How can I help you today?.\nBy Continuing, you agree to our Terms of Service and Privacy Policy."
                 messenger.send_message(welcome_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})           
             try:
