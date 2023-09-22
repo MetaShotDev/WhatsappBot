@@ -85,6 +85,9 @@ def handle_incoming_message(message_data):
         messenger.mark_as_read(message['id'])
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
+        if not conversation.is_subscribed:
+            messenger.send_message("Sorry, you have been unsubscribed from ALL.AI. Please contact team ALL.AI.", sender_phone_number)
+            return HttpResponse({'status': 'success'})
         
         if text_body == "STOP":
             conversation.is_subscribed = False
@@ -145,7 +148,6 @@ def handle_incoming_message(message_data):
         context = text_body
         conversation = Conversation(phone_number=sender_phone_number, context=context)
         conversation.last_token_used = datetime.now()
-        conversation.is_subscribed  = True
         conversation.save()
         messenger.send_message(WELCOME_TEXT, sender_phone_number)
         return HttpResponse({'status': 'success'})
