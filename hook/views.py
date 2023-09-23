@@ -25,15 +25,14 @@ Here are the available commands you can use:
 4. */tcount* - Check how many tokens you have left for this month. 🔢
 5. */icount* - Check how many image generations token left for this month. 🖼️
 6. */reset* - Resets the chat to start from the welcome message. 🪫
-7. */todoadd <todo>* - Adds a todo item to your todo list. 📝
-8. */todoview* - View your todo list. 📝
-9. */tododelete* <todo number> - Deletes a todo item from your todo list. 📝
+7. */todoadd <item>* - Adds an item to your Todo list. 📝
+8. */todoview* - View your Todo list. 📝
+9. */tododelete <todo number>* - Deletes a todo item from your todo list. 📝
 10. */feedback* - You can give feedback or report bugs using the link provided. 📖
 
 ALL.AI works on a number of languages, so feel free to try it out.
 
-Since the ALL.AI is in its beta testing, we will be adding more commands soon. 
-We hope to introduce image generation, voice note capabilities, Real-time data and much more! 🌟'''
+Since the ALL.AI is in its beta testing, we will be adding more commands soon. 🌟'''
 
 
 @api_view(['GET', 'POST'])
