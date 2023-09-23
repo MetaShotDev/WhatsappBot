@@ -36,6 +36,9 @@ ALL.AI works on a number of languages, so feel free to try it out.
 Since the ALL.AI is in its beta testing, we will be adding more commands soon. 🌟'''
 
 
+TOKEN_LIMIT = 10000
+IMAGE_LIMIT = 25
+
 @api_view(['GET', 'POST'])
 def send_whatsapp_message(request):
     if request.method == 'GET':
@@ -115,12 +118,12 @@ def handle_incoming_message(message_data):
                 messenger.send_template("welcome", sender_phone_number, lang="en", components=[])
                 return HttpResponse({'status': 'success'})
             if text_body == '/tcount':
-                remaining_tokens = (10000 - conversation.token_count) if (10000 - conversation.token_count) > 0 else 0
+                remaining_tokens = (TOKEN_LIMIT - conversation.token_count) if (10000 - conversation.token_count) > 0 else 0
                 token_text = f"You have {remaining_tokens} tokens remaining."
                 messenger.send_message(token_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})
             if text_body == '/icount':
-                remaining_images = (10 - conversation.image_count) if (10 - conversation.image_count) > 0 else 0
+                remaining_images = (IMAGE_LIMIT - conversation.image_count) if (10 - conversation.image_count) > 0 else 0
                 image_text = f"You have {remaining_images} image generations remaining."
                 messenger.send_message(image_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})
@@ -135,7 +138,7 @@ def handle_incoming_message(message_data):
                 messenger.send_message("ALL.AI is a friendly AI assistant powered by Metashot LLC. It is currently in its beta testing phase. We will be adding more features soon. Stay tuned!", sender_phone_number)
                 return HttpResponse({'status': 'success'})
             if text_body[:6] == '/image':
-                if conversation.image_count > 25:
+                if conversation.image_count > IMAGE_LIMIT:
                     messenger.send_message("Sorry, you have exceeded the free limit allowed for this month.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
 
@@ -236,7 +239,7 @@ def handle_incoming_message(message_data):
         if conversation.last_token_used.month != datetime.now().month:
             conversation.token_count = 0
 
-        if conversation.token_count > 10000:
+        if conversation.token_count > TOKEN_LIMIT:
             text_body = "Sorry, you have exceeded the free limit allowed for this month."
             messenger.send_message(text_body, sender_phone_number)
             return HttpResponse({'status': 'success'})
