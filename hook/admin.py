@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, WhiteList
+from .models import Conversation, WhiteList, Todo
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
@@ -16,3 +16,10 @@ class WhiteListAdmin(admin.ModelAdmin):
     search_fields = ('phone_number',)
     readonly_fields = ('updated_at',)
     ordering = ('-updated_at',)
+
+@admin.register(Todo)
+class TodoAdmin(admin.ModelAdmin):
+    list_display = ('user', 'todo', 'created_at')
+    search_fields = ('user', 'todo')
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)
