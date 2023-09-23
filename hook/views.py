@@ -247,7 +247,15 @@ def handle_incoming_message(message_data):
         else:
             context = conversation.context
 
-       
+        # if prompt is about todo list, add todo list to context
+        if 'todo' in text_body.lower():
+            todos = Todo.objects.filter(user=conversation).order_by('-created_at')
+            todo_list = "Your todo list:\n"
+            for key, todo in enumerate(todos):
+                todo_list += f"{key+1}. {todo.todo}\n"
+            text_body += todo_list
+            text_body += " if time is provided sort in that time order with optimal time lose"
+
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -262,7 +270,6 @@ def handle_incoming_message(message_data):
         conversation.last_token_used = datetime.now()
         conversation.save()
         messenger.send_message(response["content"], sender_phone_number)
-        
         return HttpResponse({'status': 'success'})
 
     except Conversation.DoesNotExist:
