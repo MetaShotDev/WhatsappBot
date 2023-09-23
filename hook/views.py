@@ -14,7 +14,7 @@ AVAILABLE_COMMANDS = {
     "reset", "tcount", "help",
     "feedback", "info", "image",
     "icount", "todoadd", "todoview",
-    "tododelete"
+    "tododelete", "todoclear"
 }
 
 HELP_TEXT = '''ALL.AI help menu 🤖
@@ -28,7 +28,8 @@ Here are the available commands you can use:
 7. */todoadd <item>* - Adds an item to your Todo list. 📝
 8. */todoview* - View your Todo list. 📝
 9. */tododelete <todo number>* - Deletes a todo item from your todo list. 📝
-10. */feedback* - You can give feedback or report bugs using the link provided. 📖
+10. */todoclear* - Clears your todo list. 📝
+11. */feedback* - You can give feedback or report bugs using the link provided. 📖
 
 ALL.AI works on a number of languages, so feel free to try it out.
 
@@ -165,9 +166,29 @@ def handle_incoming_message(message_data):
                 if len(text_body) < 9:
                     messenger.send_message("Please provide a todo item.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
+
+                # if items are separated by commas, add each item separately
+                if ',' in text_body[9:]:
+                    items = text_body[9:].split(',')
+                    for item in items:
+                        todo = Todo.objects.create(user=conversation, todo=item)
+                        todo.save()
+                    todos = Todo.objects.filter(user=conversation).order_by('-created_at')
+                    todo_list = "Your todo list:\n"
+                    for key, todo in enumerate(todos):
+                        todo_list += f"{key+1}. {todo.todo}\n"
+
+                    messenger.send_message(todo_list, sender_phone_number)
+                    return HttpResponse({'status': 'success'})
                 todo = Todo.objects.create(user=conversation, todo=text_body[9:])
                 todo.save()
-                messenger.send_message("Todo item added successfully!", sender_phone_number)
+                # send current todo list
+                todos = Todo.objects.filter(user=conversation).order_by('-created_at')
+                todo_list = "Your todo list:\n"
+                for key, todo in enumerate(todos):
+                    todo_list += f"{key+1}. {todo.todo}\n"
+
+                messenger.send_message(todo_list, sender_phone_number)
                 return HttpResponse({'status': 'success'})
             
             if text_body[:9] == '/todoview':
@@ -200,6 +221,16 @@ def handle_incoming_message(message_data):
                 except ValueError:
                     messenger.send_message("Invalid todo item number.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
+            
+            if text_body[:10] == '/todoclear':
+                todos = Todo.objects.filter(user=conversation).order_by('-created_at')
+                if len(todos) == 0:
+                    messenger.send_message("You have no todo items.", sender_phone_number)
+                    return HttpResponse({'status': 'success'})
+                for todo in todos:
+                    todo.delete()
+                messenger.send_message("Todo list cleared successfully!", sender_phone_number)
+                return HttpResponse({'status': 'success'})
 
 
         if conversation.last_token_used.month != datetime.now().month:
