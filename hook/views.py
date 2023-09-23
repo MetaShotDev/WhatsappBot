@@ -250,6 +250,10 @@ def handle_incoming_message(message_data):
         # if prompt is about todo list, add todo list to context
         if 'todo' in text_body.lower():
             todos = Todo.objects.filter(user=conversation).order_by('-created_at')
+            if len(todos) == 0:
+                messenger.send_message("You have no todo items.", sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            
             todo_list = "Your todo list:\n"
             for key, todo in enumerate(todos):
                 todo_list += f"{key+1}. {todo.todo}\n"
