@@ -19,3 +19,15 @@ class WhiteList(models.Model):
 
     def __str__(self):
         return self.phone_number
+
+class Todo(models.Model):
+    user = models.ForeignKey(Conversation, on_delete=models.CASCADE)
+    todo = models.CharField(max_length=1024)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.todo
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'todo', 'created_at')
