@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from django.http import HttpResponse
 from rest_framework.decorators import api_view
-from .models import Conversation
+from .models import Conversation, WhiteList
 import openai
 from heyoo import WhatsApp
 from dotenv import load_dotenv
@@ -10,7 +10,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Constants
-AVAILABLE_COMMANDS = {"reset", "tcount", "help"}
+AVAILABLE_COMMANDS = {
+    "reset", "tcount", "help",
+    "feedback", "info", "image",
+    "icount"
+}
 
 # Replace with your WhatsApp welcome message
 WELCOME_TEXT = '''Hello there! I'm ALL.AI, a friendly AI assistant powered by ChatGPT. 👋
@@ -26,9 +30,11 @@ HELP_TEXT = '''ALL.AI help menu 🤖
 Here are the available commands you can use:
 1. /help - Displays this help message. 🔨
 2. /info - Provides information about the bot. 📓
-3. /tcount - Check how many tokens you have left. 🔢
-4. /reset - Resets the chat to start from the welcome message. 🪫
-5. /feedback - You can give feedback or report bugs using the link provided. 📖
+3. /image <prompt> - Generates an image based on the prompt provided. 🖼️
+4. /tcount - Check how many tokens you have left for this month. 🔢
+5. /icount - Check how many image generations token left for this month. 🖼️
+6. /reset - Resets the chat to start from the welcome message. 🪫
+7. /feedback - You can give feedback or report bugs using the link provided. 📖
 
 ALL.AI works on a number of languages, so feel free to try it out.
 
@@ -70,6 +76,7 @@ def process_whatsapp_post(request):
         return HttpResponse({'status': 'error', 'message': str(e)}, status=500)
 
 def handle_incoming_message(message_data):
+
     try:
         openai.api_key = os.getenv('OPENAI_API_KEY')
         messenger = WhatsApp(
@@ -79,23 +86,33 @@ def handle_incoming_message(message_data):
         
         message = message_data['messages'][0]
         sender_phone_number = message['from']
-        text_body = message['text']['body']
+        if message['type'] == 'text':
+            text_body = message['text']['body']
+        elif message['type'] == 'button':
+            
+            text_body = message['button']['text']
         context = ''
         
         messenger.mark_as_read(message['id'])
+       
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
+        
         if not conversation.is_subscribed:
-            messenger.send_message("Sorry, you have been unsubscribed from ALL.AI. Please contact team ALL.AI.", sender_phone_number)
+            messenger.send_message("You are unsubscribed from ALL.AI. Contact team ALL.AI at coreteam@helloallai.com", sender_phone_number)
             return HttpResponse({'status': 'success'})
         
+        if text_body == "START":
+            messenger.send_message("Hello! How can I assist you today?", sender_phone_number)
+            return HttpResponse({'status': 'success'})
+
         if text_body == "STOP":
             conversation.is_subscribed = False
             conversation.save()
-            messenger.send_message("You have been unsubscribed from ALL.AI. Thank you for your participation!", sender_phone_number)
+            messenger.send_message("You are unsubscribed from ALL.AI. Thank you for your participation!", sender_phone_number)
             return HttpResponse({'status': 'success'})
         if text_body[0] == '/':
-            if text_body[1:] not in AVAILABLE_COMMANDS:
+            if text_body.split()[0][1:] not in AVAILABLE_COMMANDS:
                 messenger.send_message("Sorry, that command is not available. Please try again.", sender_phone_number)
                 return HttpResponse({'status': 'success'})
             if text_body == '/reset':
@@ -108,9 +125,49 @@ def handle_incoming_message(message_data):
                 token_text = f"You have {remaining_tokens} tokens remaining."
                 messenger.send_message(token_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})
+            if text_body == '/icount':
+                remaining_images = (10 - conversation.image_count) if (10 - conversation.image_count) > 0 else 0
+                image_text = f"You have {remaining_images} image generations remaining."
+                messenger.send_message(image_text, sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            
             if text_body == '/help':
                 messenger.send_message(HELP_TEXT, sender_phone_number)
                 return HttpResponse({'status': 'success'})
+            if text_body == '/feedback':
+                messenger.send_message("Please provide your feedback here: https://forms.gle/swqKtU82uEtHaWzw9", sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            if text_body == '/info':
+                messenger.send_message("ALL.AI is a friendly AI assistant powered by Metashot LLC. It is currently in its beta testing phase. We will be adding more features soon. Stay tuned!", sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            if text_body[:6] == '/image':
+                if conversation.image_count > 10:
+                    messenger.send_message("Sorry, you have exceeded the free limit allowed for this month.", sender_phone_number)
+                    return HttpResponse({'status': 'success'})
+
+                if conversation.last_image_used.month != datetime.now().month:
+                    conversation.image_count = 0
+
+                if len(text_body) < 7:
+                    messenger.send_message("Please provide a prompt for the image generation.", sender_phone_number)
+                    return HttpResponse({'status': 'success'})
+
+                response = openai.Image.create(
+                    prompt=text_body[6:],
+                    n=1,
+                    size="1024x1024"
+                )
+                image_url = response['data'][0]['url']
+                conversation.image_count += 1
+                conversation.last_image_used = datetime.now()
+                conversation.save()
+                messenger.send_image(
+                    image_url, 
+                    sender_phone_number,
+                    caption="Image generated by ALL.AI"
+                )
+                return HttpResponse({'status': 'success'})
+
 
         if conversation.last_token_used.month != datetime.now().month:
             conversation.token_count = 0
@@ -148,8 +205,15 @@ def handle_incoming_message(message_data):
         context = text_body
         conversation = Conversation(phone_number=sender_phone_number, context=context)
         conversation.last_token_used = datetime.now()
+        conversation.last_image_used = datetime.now()
+    
+        if WhiteList.objects.filter(phone_number=sender_phone_number).exists():
+            conversation.is_subscribed = True
+        else:
+            conversation.is_subscribed = False
+
         conversation.save()
-        messenger.send_message(WELCOME_TEXT, sender_phone_number)
+        messenger.send_template("welcome", sender_phone_number, lang="en", components=[])
         return HttpResponse({'status': 'success'})
     except Exception as e:
         messenger.send_message("Sorry, I don't understand. Please try again.", sender_phone_number)
