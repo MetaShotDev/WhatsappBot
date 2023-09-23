@@ -6,6 +6,8 @@ from .models import Conversation, WhiteList, Todo
 import openai
 from heyoo import WhatsApp
 from dotenv import load_dotenv
+import speech_recognition as sr
+from pydub import AudioSegment
 
 load_dotenv()
 
@@ -38,6 +40,7 @@ Since the ALL.AI is in its beta testing, we will be adding more commands soon. ð
 
 TOKEN_LIMIT = 10000
 IMAGE_LIMIT = 25
+DEBUG = os.getenv('DEBUG', False)
 
 @api_view(['GET', 'POST'])
 def send_whatsapp_message(request):
@@ -72,6 +75,25 @@ def process_whatsapp_post(request):
         # Handle exceptions and errors gracefully
         return HttpResponse({'status': 'error', 'message': str(e)}, status=500)
 
+def audio_to_text(audio_file):
+    recognizer = sr.Recognizer()
+    ogg_audio = AudioSegment.from_ogg(audio_file)
+    ogg_audio.export(f"{audio_file}.wav", format="wav")
+
+    with sr.AudioFile(f"{audio_file}.wav") as source:
+        audio = recognizer.record(source)
+    try:
+        text = recognizer.recognize_google(audio)
+        # delete temporary audio file
+        os.remove(f"{audio_file}.wav")
+        return (text, True)
+    except sr.UnknownValueError:
+        return ("Could not understand audio", False)
+    except sr.RequestError as e:
+        return ("Could not request results from Speech Recognition service;", False)
+    except Exception as e:
+        return (str(e), False)
+
 def handle_incoming_message(message_data):
 
     try:
@@ -83,15 +105,31 @@ def handle_incoming_message(message_data):
         
         message = message_data['messages'][0]
         sender_phone_number = message['from']
+        messenger.mark_as_read(message['id'])
+
+        if DEBUG and sender_phone_number != os.getenv('DEBUG_PHONE_NUMBER'):
+            messenger.send_message("Server maintenance in progress. Please try again later.", sender_phone_number)
+            return HttpResponse({'status': 'success'})
+
         if message['type'] == 'text':
             text_body = message['text']['body']
         elif message['type'] == 'button':
-            
             text_body = message['button']['text']
+        elif message['type'] == 'audio':
+            audio_url = messenger.query_media_url(message['audio']['id'])
+            mime_type = message['audio']['mime_type']
+            audio_filename = messenger.download_media(
+                audio_url, mime_type,
+                file_path=f"temp/{sender_phone_number}"
+            )
+            text_body, success = audio_to_text(audio_filename)
+            os.remove(audio_filename)
+            if not success:
+                messenger.send_message(text_body, sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            else:
+                text_body = text_body.lower()
         context = ''
-        
-        messenger.mark_as_read(message['id'])
-       
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
         
@@ -294,5 +332,6 @@ def handle_incoming_message(message_data):
         messenger.send_template("welcome", sender_phone_number, lang="en", components=[])
         return HttpResponse({'status': 'success'})
     except Exception as e:
+        print(e)
         messenger.send_message("Sorry, I don't understand. Please try again.", sender_phone_number)
         return HttpResponse({'status': 'error', 'message': str(e)})
