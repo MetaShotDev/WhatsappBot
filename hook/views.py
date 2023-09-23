@@ -135,7 +135,7 @@ def handle_incoming_message(message_data):
                 messenger.send_message("ALL.AI is a friendly AI assistant powered by Metashot LLC. It is currently in its beta testing phase. We will be adding more features soon. Stay tuned!", sender_phone_number)
                 return HttpResponse({'status': 'success'})
             if text_body[:6] == '/image':
-                if conversation.image_count > 10:
+                if conversation.image_count > 25:
                     messenger.send_message("Sorry, you have exceeded the free limit allowed for this month.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
 
