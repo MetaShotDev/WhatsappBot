@@ -8,7 +8,8 @@ from heyoo import WhatsApp
 from dotenv import load_dotenv
 import speech_recognition as sr
 from pydub import AudioSegment
-import textract
+from pytesseract import image_to_string
+from PIL import Image
 
 load_dotenv()
 
@@ -30,14 +31,20 @@ Here are the available commands you can use:
 6. */reset* - Resets the chat to start from the welcome message. 🪫
 7. */todoadd <item>* - Adds an item to your Todo list. 📝
 8. */todoview* - View your Todo list. 📝
-9. */tododelete <todo number>* - Deletes a todo item from your todo list. 📝
-10. */todoclear* - Clears your todo list. 📝
-11. */feedback* - You can give feedback or report bugs using the link provided. 📖
+9. */tododelete <todo number>*- Deletes a todo item from your todo list. 📝
+10. */feedback* - You can give feedback or report bugs using the link provided. 📖
 
-ALL.AI works on a number of languages, so feel free to try it out.
+ALL.AI works on a number of languages as well as with voice notes, so feel free to try it out.
+
+If you type *"STOP"*, you cannot use ALL.AI any further. Once this has been done, to resubscribe, you will have to get in touch with "coreteam@helloallai.com" 
 
 Since the ALL.AI is in its beta testing, we will be adding more commands soon. 🌟'''
 
+
+NOT_SUBSCRIBED_TEXT = '''Welcome to ALL.AI, a friendly AI assistant powered by ChatGPT. 👋
+It looks like you haven't subscribed to ALL.AI yet. You can do so at helloallai.com, under the waitlist button.
+If you have already added your name to the waitlist and have not yet been selected, please wait for at least a week and then send an email to "coreteam@helloallai.com" 
+Have a good day!'''
 
 TOKEN_LIMIT = 10000
 IMAGE_LIMIT = 25
@@ -137,10 +144,13 @@ def handle_incoming_message(message_data):
                 image_url, mime_type,
                 file_path=f"temp/image_{sender_phone_number}"
             )
-            result = textract.process(image_filename).decode('utf-8')
-            print(result)
+            text_body = image_to_string(Image.open(image_filename), lang='eng')
             os.remove(image_filename)
-            text_body = result.lower()
+        else:
+            messenger.send_message("Apologies, but it seems that this feature is not available yet. We are actively working on developing it and appreciate your patience. Please stay tuned for future updates!.", sender_phone_number)
+            return HttpResponse({'status': 'success'})
+            
+           
 
 
         context = ''
@@ -148,7 +158,7 @@ def handle_incoming_message(message_data):
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
         
         if not conversation.is_subscribed:
-            messenger.send_message("You are unsubscribed from ALL.AI. Contact team ALL.AI at coreteam@helloallai.com", sender_phone_number)
+            messenger.send_message(NOT_SUBSCRIBED_TEXT, sender_phone_number)
             return HttpResponse({'status': 'success'})
         
         if text_body == "START":
@@ -169,27 +179,27 @@ def handle_incoming_message(message_data):
                 conversation.save()
                 messenger.send_template("welcome", sender_phone_number, lang="en", components=[])
                 return HttpResponse({'status': 'success'})
-            if text_body == '/tcount':
+            elif text_body == '/tcount':
                 remaining_tokens = (TOKEN_LIMIT - conversation.token_count) if (10000 - conversation.token_count) > 0 else 0
                 token_text = f"You have {remaining_tokens} tokens remaining."
                 messenger.send_message(token_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})
-            if text_body == '/icount':
+            elif text_body == '/icount':
                 remaining_images = (IMAGE_LIMIT - conversation.image_count) if (10 - conversation.image_count) > 0 else 0
                 image_text = f"You have {remaining_images} image generations remaining."
                 messenger.send_message(image_text, sender_phone_number)
                 return HttpResponse({'status': 'success'})
             
-            if text_body == '/help':
+            elif text_body == '/help':
                 messenger.send_message(HELP_TEXT, sender_phone_number)
                 return HttpResponse({'status': 'success'})
-            if text_body == '/feedback':
+            elif text_body == '/feedback':
                 messenger.send_message("Please provide your feedback here: https://forms.gle/swqKtU82uEtHaWzw9", sender_phone_number)
                 return HttpResponse({'status': 'success'})
-            if text_body == '/info':
+            elif text_body == '/info':
                 messenger.send_message("ALL.AI is a friendly AI assistant powered by Metashot LLC. It is currently in its beta testing phase. We will be adding more features soon. Stay tuned!", sender_phone_number)
                 return HttpResponse({'status': 'success'})
-            if text_body[:6] == '/image':
+            elif text_body[:6] == '/image':
                 if conversation.image_count > IMAGE_LIMIT:
                     messenger.send_message("Sorry, you have exceeded the free limit allowed for this month.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
@@ -217,7 +227,7 @@ def handle_incoming_message(message_data):
                 )
                 return HttpResponse({'status': 'success'})
             
-            if text_body[:8] == '/todoadd':
+            elif text_body[:8] == '/todoadd':
                 if len(text_body) < 9:
                     messenger.send_message("Please provide a todo item.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
@@ -246,7 +256,7 @@ def handle_incoming_message(message_data):
                 messenger.send_message(todo_list, sender_phone_number)
                 return HttpResponse({'status': 'success'})
             
-            if text_body[:9] == '/todoview':
+            elif text_body[:9] == '/todoview':
                 todos = Todo.objects.filter(user=conversation).order_by('-created_at')
                 if len(todos) == 0:
                     messenger.send_message("You have no todo items.", sender_phone_number)
@@ -257,7 +267,7 @@ def handle_incoming_message(message_data):
                 messenger.send_message(todo_list, sender_phone_number)
                 return HttpResponse({'status': 'success'})
             
-            if text_body[:11] == '/tododelete':
+            elif text_body[:11] == '/tododelete':
                 if len(text_body) < 12:
                     messenger.send_message("Please provide a todo item number.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
@@ -277,7 +287,7 @@ def handle_incoming_message(message_data):
                     messenger.send_message("Invalid todo item number.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
             
-            if text_body[:10] == '/todoclear':
+            elif text_body[:10] == '/todoclear':
                 todos = Todo.objects.filter(user=conversation).order_by('-created_at')
                 if len(todos) == 0:
                     messenger.send_message("You have no todo items.", sender_phone_number)
