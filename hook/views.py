@@ -8,6 +8,7 @@ from heyoo import WhatsApp
 from dotenv import load_dotenv
 import speech_recognition as sr
 from pydub import AudioSegment
+import textract
 
 load_dotenv()
 
@@ -120,7 +121,7 @@ def handle_incoming_message(message_data):
             mime_type = message['audio']['mime_type']
             audio_filename = messenger.download_media(
                 audio_url, mime_type,
-                file_path=f"temp/{sender_phone_number}"
+                file_path=f"temp/audio_{sender_phone_number}"
             )
             text_body, success = audio_to_text(audio_filename)
             os.remove(audio_filename)
@@ -129,6 +130,19 @@ def handle_incoming_message(message_data):
                 return HttpResponse({'status': 'success'})
             else:
                 text_body = text_body.lower()
+        elif message['type'] == 'image':
+            image_url = messenger.query_media_url(message['image']['id'])
+            mime_type = message['image']['mime_type']
+            image_filename = messenger.download_media(
+                image_url, mime_type,
+                file_path=f"temp/image_{sender_phone_number}"
+            )
+            result = textract.process(image_filename).decode('utf-8')
+            print(result)
+            os.remove(image_filename)
+            text_body = result.lower()
+
+
         context = ''
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
