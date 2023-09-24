@@ -140,12 +140,17 @@ def handle_incoming_message(message_data):
         elif message['type'] == 'image':
             image_url = messenger.query_media_url(message['image']['id'])
             mime_type = message['image']['mime_type']
+            caption = ''
+            if 'caption' in message['image']:
+                caption = message['image']['caption']
             image_filename = messenger.download_media(
                 image_url, mime_type,
                 file_path=f"temp/image_{sender_phone_number}"
             )
             text_body = image_to_string(Image.open(image_filename), lang='eng')
+            text_body += f" {caption}"
             os.remove(image_filename)
+            
         else:
             messenger.send_message("Apologies, but it seems that this feature is not available yet. We are actively working on developing it and appreciate your patience. Please stay tuned for future updates!.", sender_phone_number)
             return HttpResponse({'status': 'success'})
@@ -177,7 +182,8 @@ def handle_incoming_message(message_data):
             if text_body == '/reset':
                 conversation.context = ''
                 conversation.save()
-                messenger.send_template("welcome", sender_phone_number, lang="en", components=[])
+                messenger.send_message("Your chat has been reset.", sender_phone_number)
+                messenger.send_message("Hello! How can I assist you today?", sender_phone_number)
                 return HttpResponse({'status': 'success'})
             elif text_body == '/tcount':
                 remaining_tokens = (TOKEN_LIMIT - conversation.token_count) if (10000 - conversation.token_count) > 0 else 0
