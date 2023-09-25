@@ -375,6 +375,12 @@ def on_board_numbers(request):
         phone_number = request.data['phone_number']
         if not WhiteList.objects.filter(phone_number=phone_number).exists():
             WhiteList.objects.create(phone_number=phone_number)
+            # create conversation object and save
+            conversation = Conversation(phone_number=phone_number, context='')
+            conversation.last_token_used = datetime.now()
+            conversation.last_image_used = datetime.now()
+            conversation.is_subscribed = True
+            conversation.save()
             messenger = WhatsApp(
                 os.getenv('WHATSAPP_API_KEY'),
                 phone_number_id='128744806985877'
