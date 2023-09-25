@@ -368,3 +368,23 @@ def handle_incoming_message(message_data):
         print(e)
         messenger.send_message("Sorry, I don't understand. Please try again.", sender_phone_number)
         return HttpResponse({'status': 'error', 'message': str(e)})
+
+@api_view(['POST'])
+def on_board_numbers(request):
+    try:
+        phone_number = request.data['phone_number']
+        if not WhiteList.objects.filter(phone_number=phone_number).exists():
+            WhiteList.objects.create(phone_number=phone_number)
+            messenger = WhatsApp(
+                os.getenv('WHATSAPP_API_KEY'),
+                phone_number_id='128744806985877'
+            )
+            messenger.send_template("welcome", phone_number, lang="en", components=[])
+            return HttpResponse({'status': 'success'})
+        else:
+            return HttpResponse({'status': 'success'})
+    
+    except Exception as e:
+        return HttpResponse({'status': 'error', 'message': str(e)})
+    
+    
