@@ -171,10 +171,7 @@ def handle_incoming_message(message_data):
         if conversation.last_token_used.month != datetime.now().month:
             conversation.token_count = 0
 
-        if conversation.token_count > TOKEN_LIMIT:
-            text_body = "Sorry, you have exceeded the free limit allowed for this month."
-            messenger.send_message(text_body, sender_phone_number)
-            return HttpResponse({'status': 'success'})
+        
         if (conversation.updated_at.replace(tzinfo=None) - datetime.now()).total_seconds() > 1800:
             context = text_body
             conversation.context = context
@@ -331,7 +328,12 @@ def handle_incoming_message(message_data):
                 todo_list += f"{key+1}. {todo.todo}\n"
             text_body += todo_list
             text_body += " if time is provided sort in that time order with optimal time lose"
-
+        
+        if conversation.token_count > TOKEN_LIMIT:
+            text_body = "Sorry, you have exceeded the free limit allowed for this month."
+            messenger.send_message(text_body, sender_phone_number)
+            return HttpResponse({'status': 'success'})
+        
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
