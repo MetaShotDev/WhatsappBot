@@ -8,9 +8,9 @@ from heyoo import WhatsApp
 from dotenv import load_dotenv
 import speech_recognition as sr
 from pydub import AudioSegment
-from pytesseract import image_to_string
-from PIL import Image
-import time
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+
 
 load_dotenv()
 
@@ -369,6 +369,7 @@ def handle_incoming_message(message_data):
         messenger.send_message("Sorry, I don't understand. Please try again.", sender_phone_number)
         return HttpResponse({'status': 'error', 'message': str(e)})
 
+@permission_classes([IsAuthenticated])
 @api_view(['POST'])
 def on_board_numbers(request):
     try:
@@ -393,4 +394,20 @@ def on_board_numbers(request):
     except Exception as e:
         return HttpResponse({'status': 'error', 'message': str(e)})
     
-    
+
+@permission_classes([IsAuthenticated])
+@api_view(['POST'])
+def send_tip(request):
+    # send tip to all numbers in whitelist
+    try:
+        messenger = WhatsApp(
+            os.getenv('WHATSAPP_API_KEY'),
+            phone_number_id='128744806985877'
+        )
+        tip = request.data['tip']
+        phone_numbers = WhiteList.objects.all()
+        for phone_number in phone_numbers:
+            messenger.send_message(tip, phone_number)
+        return HttpResponse({'status': 'success'})
+    except Exception as e:
+        return HttpResponse({'status': 'error', 'message': str(e)})
