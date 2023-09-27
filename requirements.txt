@@ -7,3 +7,4 @@ django-cors-headers
 whitenoise
 SpeechRecognition
 pytesseract
+pillow

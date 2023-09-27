@@ -10,7 +10,9 @@ import speech_recognition as sr
 from pydub import AudioSegment
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
-
+from pytesseract import image_to_string
+from PIL import Image
+import time
 
 load_dotenv()
 
@@ -139,19 +141,20 @@ def handle_incoming_message(message_data):
                 return HttpResponse({'status': 'success'})
             else:
                 text_body = text_body.lower()
-        # elif message['type'] == 'image':
-        #     image_url = messenger.query_media_url(message['image']['id'])
-        #     mime_type = message['image']['mime_type']
-        #     caption = ''
-        #     if 'caption' in message['image']:
-        #         caption = message['image']['caption']
-        #     image_filename = messenger.download_media(
-        #         image_url, mime_type,
-        #         file_path=f"temp/image_{sender_phone_number}"
-        #     )
-        #     text_body = image_to_string(Image.open(image_filename), lang='eng')
-        #     text_body += f" {caption}"
-        #     os.remove(image_filename)
+        elif message['type'] == 'image':
+            image_url = messenger.query_media_url(message['image']['id'])
+            mime_type = message['image']['mime_type']
+            caption = ''
+            if 'caption' in message['image']:
+                caption = message['image']['caption']
+            image_filename = messenger.download_media(
+                image_url, mime_type,
+                file_path=f"temp/image_{sender_phone_number}"
+            )
+            text_body = image_to_string(Image.open(image_filename), lang='eng')
+            text_body += f" {caption}"
+            time.sleep(3)
+            os.remove(image_filename)
             
         else:
             messenger.send_message("Apologies, but it seems that this feature is not available yet. We are actively working on developing it and appreciate your patience. Please stay tuned for future updates!.", sender_phone_number)
