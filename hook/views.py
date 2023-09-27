@@ -407,10 +407,10 @@ def send_tip(request):
             os.getenv('WHATSAPP_API_KEY'),
             phone_number_id='128744806985877'
         )
-        tip = request.data['tip']
+        template = request.data['template']
         phone_numbers = WhiteList.objects.all()
         for phone_number in phone_numbers:
-            messenger.send_message(tip, phone_number)
+            messenger.send_template(template, phone_number.phone_number, lang="en", components=[])
         return HttpResponse({'status': 'success'})
     except Exception as e:
         return HttpResponse({'status': 'error', 'message': str(e)})
