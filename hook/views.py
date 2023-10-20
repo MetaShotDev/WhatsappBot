@@ -338,11 +338,12 @@ def handle_incoming_message(message_data):
             return HttpResponse({'status': 'success'})
         
         completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": context},
                 {"role": "user", "content": text_body}
-            ]
+            ],
+            temperature=1,
         )
 
         response = completion['choices'][0].message
