@@ -63,7 +63,7 @@ def send_whatsapp_message(request):
         # Handle POST request for incoming WhatsApp messages
         return process_whatsapp_post(request)
     else:
-        return HttpResponse(status=405)  # Method not allowed
+        return HttpResponse(status=200)  # Method not allowed
 
 def process_whatsapp_get(request):
    
@@ -71,7 +71,7 @@ def process_whatsapp_get(request):
     if request.GET.get('hub.verify_token') == verify_token:
         return HttpResponse(request.GET.get('hub.challenge'))
     else:
-        return HttpResponse(status=403)  # Token verification failed
+        return HttpResponse(status=200)  # Token verification failed
 
 def process_whatsapp_post(request):
     try:
@@ -82,10 +82,10 @@ def process_whatsapp_post(request):
         elif 'statuses' in value:
             return HttpResponse({'status': 'success'})
         else:
-            return HttpResponse({'status': 'failed'}, status=400)  # Invalid message
+            return HttpResponse({'status': 'failed'}, status=200)  # Invalid message
     except Exception as e:
         # Handle exceptions and errors gracefully
-        return HttpResponse({'status': 'error', 'message': str(e)}, status=500)
+        return HttpResponse({'status': 'error', 'message': str(e)}, status=200)
 
 def audio_to_text(audio_file):
     recognizer = sr.Recognizer()
