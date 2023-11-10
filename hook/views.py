@@ -118,6 +118,12 @@ def handle_incoming_message(message_data):
         message = message_data['messages'][0]
         sender_phone_number = message['from']
         messenger.mark_as_read(message['id'])
+        conversation = Conversation.objects.get(phone_number=sender_phone_number)
+        if conversation.last_message_id == message['id']:
+            print("Multiple messages received")
+            return HttpResponse({'status': 'success'})
+        conversation.last_message_id = message['id']
+        conversation.save()
 
         if DEBUG and sender_phone_number != os.getenv('DEBUG_PHONE_NUMBER'):
             messenger.send_message("Server maintenance in progress. Please try again later.", sender_phone_number)
@@ -244,7 +250,6 @@ def handle_incoming_message(message_data):
                 image_url = response['data'][0]['url']
                 conversation.image_count += 1
                 conversation.last_image_used = datetime.now()
-                conversation.last_message_id = message['id']
                 conversation.save()
                 messenger.send_image(
                     image_url, 
@@ -354,7 +359,6 @@ def handle_incoming_message(message_data):
         conversation.context = str(response['content'])[:500]
         conversation.token_count += len(response['content'].split())
         conversation.last_token_used = datetime.now()
-        conversation.last_message_id = message['id']
         conversation.save()
         messenger.send_message(response["content"], sender_phone_number)
         return HttpResponse({'status': 'success'})
