@@ -172,10 +172,7 @@ def handle_incoming_message(message_data):
         context = ''
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
-        if message['id'] == conversation.last_message_id:
-            print("Multiple messages received")
-            return HttpResponse({'status': 'success'})
-        
+    
         if not conversation.is_subscribed:
             messenger.send_message(NOT_SUBSCRIBED_TEXT, sender_phone_number)
             return HttpResponse({'status': 'success'})
