@@ -343,7 +343,7 @@ def handle_incoming_message(message_data):
             messenger.send_message(text_body, sender_phone_number)
             return HttpResponse({'status': 'success'})
         
-        text_body += " Make response to 100words"
+        text_body += " Make response to 100words if needed otherwise keep it as it is"
 
         completion = openai.ChatCompletion.create(
             model="gpt-4",
