@@ -166,6 +166,9 @@ def handle_incoming_message(message_data):
         context = ''
         
         conversation = Conversation.objects.get(phone_number=sender_phone_number)
+        if message['id'] == conversation.last_message_id:
+            print("Multiple messages received")
+            return HttpResponse({'status': 'success'})
         
         if not conversation.is_subscribed:
             messenger.send_message(NOT_SUBSCRIBED_TEXT, sender_phone_number)
@@ -241,6 +244,7 @@ def handle_incoming_message(message_data):
                 image_url = response['data'][0]['url']
                 conversation.image_count += 1
                 conversation.last_image_used = datetime.now()
+                conversation.last_message_id = message['id']
                 conversation.save()
                 messenger.send_image(
                     image_url, 
@@ -350,6 +354,7 @@ def handle_incoming_message(message_data):
         conversation.context = str(response['content'])[:500]
         conversation.token_count += len(response['content'].split())
         conversation.last_token_used = datetime.now()
+        conversation.last_message_id = message['id']
         conversation.save()
         messenger.send_message(response["content"], sender_phone_number)
         return HttpResponse({'status': 'success'})

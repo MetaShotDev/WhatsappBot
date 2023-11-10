@@ -5,7 +5,7 @@ from .models import Conversation, WhiteList, Todo
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
     list_display = ('phone_number', 'context', 'token_count', 'last_token_used',
-                    'image_count','last_image_used', 'is_subscribed')
+                    'image_count','last_image_used', 'is_subscribed', 'last_message_id')
     search_fields = ('phone_number', 'context')
     readonly_fields = ('updated_at',)
     ordering = ('-updated_at','token_count')
