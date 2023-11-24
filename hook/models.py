@@ -31,7 +31,6 @@ class Todo(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-        unique_together = ('user', 'todo', 'created_at')
 
 class FeedBack(models.Model):
     phone = models.CharField(max_length=100)
@@ -43,4 +42,3 @@ class FeedBack(models.Model):
     
     class Meta:
         ordering = ['-created_at']
-        unique_together = ('phone', 'feedback', 'created_at')
