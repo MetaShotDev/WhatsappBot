@@ -3,7 +3,6 @@ from datetime import datetime
 from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from .models import Conversation, WhiteList, Todo
-import openai
 from heyoo import WhatsApp
 from dotenv import load_dotenv
 import speech_recognition as sr
@@ -13,6 +12,7 @@ from rest_framework.decorators import permission_classes
 from pytesseract import image_to_string
 from PIL import Image
 import time
+from openai import OpenAI
 
 load_dotenv()
 
@@ -109,7 +109,9 @@ def audio_to_text(audio_file):
 def handle_incoming_message(message_data):
 
     try:
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        client = OpenAI(
+            api_key=os.getenv('OPENAI_API_KEY'),
+        )
         messenger = WhatsApp(
             os.getenv('WHATSAPP_API_KEY'),
             phone_number_id='128744806985877'
@@ -238,13 +240,17 @@ def handle_incoming_message(message_data):
                 if len(text_body) < 7:
                     messenger.send_message("Please provide a prompt for the image generation.", sender_phone_number)
                     return HttpResponse({'status': 'success'})
-
-                response = openai.Image.create(
+                
+                
+                response = client.images.generate(
+                    model="dall-e-3",
                     prompt=text_body[6:],
+                    size="1024x1024",
+                    quality="standard",
                     n=1,
-                    size="1024x1024"
                 )
-                image_url = response['data'][0]['url']
+
+                image_url = response.data[0].url
                 conversation.image_count += 1
                 conversation.last_image_used = datetime.now()
                 conversation.save()
@@ -342,11 +348,11 @@ def handle_incoming_message(message_data):
             text_body = "Sorry, you have exceeded the free limit allowed for this month."
             messenger.send_message(text_body, sender_phone_number)
             return HttpResponse({'status': 'success'})
-        
-        text_body += " Make response to 100words if needed otherwise keep it as it is"
+        if len(text_body) > 50:
+            text_body += " Make response to 100words if needed otherwise keep it as it is"
 
-        completion = openai.ChatCompletion.create(
-            model="gpt-4",
+        completion =  client.chat.completions.create(
+            model="gpt-4-1106-preview",
             messages=[
                 {"role": "system", "content": context},
                 {"role": "user", "content": text_body}
@@ -354,12 +360,12 @@ def handle_incoming_message(message_data):
             temperature=1,
         )
 
-        response = completion['choices'][0].message
-        conversation.context = str(response['content'])[:500]
-        conversation.token_count += len(response['content'].split())
+        response = completion.choices[0].message
+        conversation.context = str(response.content)[:500]
+        conversation.token_count += len(response.content.split())
         conversation.last_token_used = datetime.now()
         conversation.save()
-        messenger.send_message(response["content"], sender_phone_number)
+        messenger.send_message(response.content, sender_phone_number)
         return HttpResponse({'status': 'success'})
 
     except Conversation.DoesNotExist:
