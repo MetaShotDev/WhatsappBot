@@ -9,7 +9,7 @@ class Conversation(models.Model):
     last_image_used = models.DateTimeField(default=None,null=True)
     is_subscribed = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
-    last_message_id = models.CharField(max_length=100, default=None, null=True)
+    last_message_id = models.CharField(max_length=100, default='', null=True)
 
     def __str__(self):
         return self.phone_number 
