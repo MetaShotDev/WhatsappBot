@@ -32,3 +32,15 @@ class Todo(models.Model):
     class Meta:
         ordering = ['-created_at']
         unique_together = ('user', 'todo', 'created_at')
+
+class FeedBack(models.Model):
+    phone = models.CharField(max_length=100)
+    feedback = models.CharField(max_length=1024)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.feedback
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('phone', 'feedback', 'created_at')

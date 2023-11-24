@@ -13,6 +13,7 @@ from pytesseract import image_to_string
 from PIL import Image
 import time
 from openai import OpenAI
+from hook.models import FeedBack
 
 load_dotenv()
 
@@ -21,7 +22,7 @@ AVAILABLE_COMMANDS = {
     "reset", "tcount", "help",
     "feedback", "info", "image",
     "icount", "todoadd", "todoview",
-    "tododelete", "todoclear"
+    "tododelete", "todoclear", "dev"
 }
 
 HELP_TEXT = '''ALL.AI help menu 🤖
@@ -36,6 +37,7 @@ Here are the available commands you can use:
 8. */todoview* - View your Todo list. 📝
 9. */tododelete <todo number>*- Deletes a todo item from your todo list. 📝
 10. */feedback* - You can give feedback or report bugs using the link provided. 📖
+11. */dev* - Feedback to Developer. 🛠️
 
 ALL.AI works on a number of languages as well as with voice notes, so feel free to try it out.
 
@@ -329,6 +331,12 @@ def handle_incoming_message(message_data):
                 for todo in todos:
                     todo.delete()
                 messenger.send_message("Todo list cleared successfully!", sender_phone_number)
+                return HttpResponse({'status': 'success'})
+            
+            elif text_body[:4] == '/dev':
+                feedback = FeedBack.objects.create(phone=sender_phone_number, feedback=text_body[5:])
+                feedback.save()
+                messenger.send_message("Thank you for your feedback!", sender_phone_number)
                 return HttpResponse({'status': 'success'})
 
         # if prompt is about todo list, add todo list to context
